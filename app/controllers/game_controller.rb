@@ -1,23 +1,23 @@
 class GameController < ApplicationController
   def show
-    game = load_game
+    state = load_state
 
-    @turn = game.turn
-    @current_player = game.current_player_name
-    @players = game.players
+    @turn = state.fetch("turn")
+    @current_player = Engine::Game.current_player_name(state)
+    @players = state.fetch("players")
   end
 
   def end_turn
-    game = load_game
-    game = game.end_turn
-    save_game(game)
+    state = load_state
+    state = Engine::Game.apply_action(state, { "type" => "END_TURN" })
+    save_state(state)
     redirect_to root_path
   end
 
   def new_game
     names = params.fetch(:players, "").split(",")
-    game = Engine::Game.new_game(names)
-    save_game(game)
+    state = Engine::Game.new_game(names)
+    save_state(state)
     redirect_to root_path
   rescue ArgumentError => e
     flash[:alert] = e.message
@@ -26,19 +26,16 @@ class GameController < ApplicationController
 
   private
 
-  def load_game
-    data = session[:game]
+  def load_state
+    state = session[:game]
+    return state if state.present?
 
-    if data.nil?
-      game = Engine::Game.new(players: [ "Dan", "Kris" ], turn: 1, current_player_index: 0)
-      save_game(game)
-      return game
-    end
-
-    Engine::Game.from_h(data)
+    state = Engine::Game.new_game([ "Dan", "Kris" ])
+    save_state(state)
+    state
   end
 
-  def save_game(game)
-    session[:game] = game.to_h
+  def save_state(state)
+    session[:game] = state
   end
 end
