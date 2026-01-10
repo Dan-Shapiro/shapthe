@@ -1,17 +1,33 @@
-<h1>Scythe</h1>
+<h2>Start New Game</h2>
 
 <% if flash[:alert] %>
   <p style="color: red;"><%= flash[:alert] %></p>
 <% end %>
 
-<h2>Start New Game</h2>
 <%= form_with url: "/new_game", method: :post do %>
-  <%= text_field_tag :players, @players&.join(", "), placeholder: "Dan, Kris" %>
+  <% 2.times do |i| %>
+    <fieldset style="margin-bottom: 12px; padding: 8px; border: 1px solid $444;">
+      <legend>Player <%= i + 1 %></legend>
+
+      <div>
+        <label>Name</label><br />
+        <%= text_field_tag "players[#{i}][name]", (i == 0 ? "Dan" : "Kris") %>
+      </div>
+
+      <div style="margin-top: 6px;">
+        <label>Faction</label><br />
+        <%= select_tag "players[#{i}][faction]", options_for_select(Engine::Catalog::FACTIONS) %>
+      </div>
+
+      <div style="margin-top: 6px;">
+        <label>Player Mat</label>
+        <%= select_tag "players[#{i}][mat]", options_for_select(Engine::Catalog::PLAYER_MATS) %>
+      </div>
+    </fieldset>
+  <% end %>
+
   <%= submit_tag "Start New Game" %>
 <% end %>
-
-<p><strong>Seed:</strong> <%= @seed %></p>
-<p><strong>Roll:</strong> <%= @debug_roll %></p>
 
 <p><strong>Turn:</strong> <%= @turn %></p>
 <p><strong>Current Player:</strong> <%= @current_player %></p>
@@ -21,7 +37,11 @@
 
 <h2>Players</h2>
 <ul>
-  <% @players.each do |p| %>
-    <li><%= p %> <%= "<<" if p == @current_player %></li>
+  <% @players.each_with_index do |p, idx| %>
+    <li>
+      <strong><%= p["name"] %></strong>
+      - <%= p["faction"] %> / <%= p["mat"] %>
+      <%= "<<" if idx == @current_player_index %>
+      </li>
   <% end %>
 </ul>

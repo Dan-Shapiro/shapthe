@@ -8,6 +8,7 @@ class GameController < ApplicationController
 
     @turn = state.fetch("turn")
     @current_player = Engine::Game.current_player_name(state)
+    @xurrent_player_index = state.fetch("current_player_index")
     @players = state.fetch("players")
 
     @action_count = game.fetch("actions").length
@@ -21,8 +22,8 @@ class GameController < ApplicationController
   end
 
   def new_game
-    names = params.fetch(:players, "").split(",")
-    initial_state = Engine::Game.new_game(names)
+    raw_players = params.fetch(:players, {}).values
+    initial_state = Engine::Game.new_game(raw_players)
 
     game = {
       "initial_state" => initial_state,
@@ -40,8 +41,9 @@ class GameController < ApplicationController
 
   def load_game
     game = session[:game]
+
     if game.present? && game["initial_state"].present? && game["actions"].is_a?(Array)
-      game["initial_state"]["seed"] ||= Random.new_seed
+      normalize_state!(game["initial_state"])
       session[:game] = game
       return game
     end
@@ -63,5 +65,19 @@ class GameController < ApplicationController
     end
 
     game["actions"] << action
+  end
+
+  def normalize_state!(state)
+    state["seed"] ||= Random.new_seed
+
+    if state["players"].is_a?(Array) && state["players"].first.is_a?(String)
+      state["players"] = state["players"].map do |name|
+        {
+          "name" => name,
+          "faction" => "Nordic",
+          "mat" => "Industrial"
+        }
+      end
+    end
   end
 end

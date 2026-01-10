@@ -7,15 +7,40 @@ module Engine
     #   "current_player_index" => 0
     # }
 
-    def self.new_game(player_names)
-      names = player_names.map(&:to_s).map(&:strip).reject(&:empty?)
+    def self.new_game(raw_players)
+      players = Array(raw_players).map do |p|
+        if p.is_a?(Hash)
+          {
+            "name" => p["name"].to_s.strip,
+            "faction" => p["faction"].to_s.strip,
+            "mat" => p["mat"].to_s.strip
+          }
+        else
+          { "name" => p.to_s.strip, "faction" => "", "mat" => "" }
+        end
+      end
 
-      if names.length < 2 || names.length > 5
-        raise ArgumentError, "Only supports 2-5 players."
+      players = players.reject { |p| p["name"].empty? }
+
+      if players.length < 2 || players.length > 7
+        raise ArgumentError, "Only supports 2-7 players."
+      end
+
+      if players.any? { |p| p["faction"].empty? || p["mat"].empty? }
+        raise ArgumentError, "Each player must have a faction and playmat."
+      end
+
+      factions = players.map { |p| p["faction"] }
+      mats = players.map { |p| p["mat"] }
+      if factions.uniq.length != factions.length
+        raise ArgumentError, "Factions must be unique."
+      end
+      if mats.uniq.length != mats.length
+        raise ArgumentError, "Player mats must be unique."
       end
 
       {
-        "players" => names,
+        "players" => players,
         "turn" => 1,
         "current_player_index" => 0,
         "seed" => Random.new_seed
@@ -36,7 +61,8 @@ module Engine
     end
 
     def self.current_player_name(state)
-      state.fetch("players").fetch(state.fetch("current_player_index"))
+      player = state.fetch("players").fetch(state.fetch("current_player_index"))
+      player.is_a?(Hash) ? player.fetch("name") : player
     end
 
     # --- reducers ---
