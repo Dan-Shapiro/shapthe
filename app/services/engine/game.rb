@@ -52,5 +52,15 @@ module Engine
         "turn" => next_turn
       )
     end
+
+    def self.replay(initial_state, actions)
+      actions.reduce(initial_state) do |state, action|
+        apply_action(state, action)
+      end
+    end
+
+    def self.valid_action?(action)
+      action.is_a?(Hash) && action["type"].is_a?(String)
+    end
   end
 end
