@@ -1,12 +1,5 @@
 module Engine
   class Game
-    # --- State shape ---
-    # {
-    #   "players" => ["Dan", "Kris"],
-    #   "turn" => 1,
-    #   "current_player_index" => 0
-    # }
-
     def self.new_game(raw_players)
       players = Array(raw_players).map do |p|
         if p.is_a?(Hash)
@@ -43,18 +36,19 @@ module Engine
         "players" => players,
         "turn" => 1,
         "current_player_index" => 0,
-        "seed" => Random.new_seed
+        "seed" => Random.new_seed,
+        "turn_top_action" => nil
       }
     end
 
-    # --- Action shape ---
-    # { "type" => "END_TURN" }
     def self.apply_action(state, action)
       type = action.fetch("type")
 
       case type
       when "END_TURN"
         end_turn(state)
+      when "CHOOSE_TOP_ACTION"
+        choose_top_action(state, action)
       else
         raise ArgumentError, "Unknown action type: #{type}"
       end
@@ -63,21 +57,6 @@ module Engine
     def self.current_player_name(state)
       player = state.fetch("players").fetch(state.fetch("current_player_index"))
       player.is_a?(Hash) ? player.fetch("name") : player
-    end
-
-    # --- reducers ---
-    def self.end_turn(state)
-      players = state.fetch("players")
-      cur = state.fetch("current_player_index")
-      turn = state.fetch("turn")
-
-      next_index = (cur + 1) % players.length
-      next_turn = next_index == 0 ? turn + 1 : turn
-
-      state.merge(
-        "current_player_index" => next_index,
-        "turn" => next_turn
-      )
     end
 
     def self.replay(initial_state, actions)
@@ -95,6 +74,36 @@ module Engine
       rng = Engine::Rng.new(seed)
       roll, _rng2 = rng.rand(1000)
       roll
+    end
+
+    # --- reducers ---
+    def self.end_turn(state)
+      players = state.fetch("players")
+      cur = state.fetch("current_player_index")
+      turn = state.fetch("turn")
+
+      next_index = (cur + 1) % players.length
+      next_turn = next_index == 0 ? turn + 1 : turn
+
+      state.merge(
+        "current_player_index" => next_index,
+        "turn" => next_turn,
+        "turn_top_action" => nil
+      )
+    end
+
+    def self.choose_top_action(state, action)
+      chosen = action.fetch("action")
+
+      unless Engine::Catalog::TOP_ACTIONS.include?(chosen)
+        raise ArgumentError, "Invalid top action: #{chosen}"
+      end
+
+      if state["turn_top_action"]
+        raise ArgumentError, "Top action already chosen."
+      end
+
+      state.merge("turn_top_action" => chosen)
     end
   end
 end

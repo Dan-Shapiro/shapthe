@@ -3,12 +3,15 @@ class GameController < ApplicationController
     game = load_game
     state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
 
+    @top_actions = Engine::Catalog::TOP_ACTIONS
+    @turn_top_action = state["turn_top_action"]
+
     @seed = state.fetch("seed")
     @debug_roll = Engine::Game.debug_roll(state)
 
     @turn = state.fetch("turn")
     @current_player = Engine::Game.current_player_name(state)
-    @xurrent_player_index = state.fetch("current_player_index")
+    @current_player_index = state.fetch("current_player_index")
     @players = state.fetch("players")
 
     @action_count = game.fetch("actions").length
@@ -26,7 +29,7 @@ class GameController < ApplicationController
   end
 
   def new_game
-    raw_players = params.fetch(:players, {}).values
+    raw_players = players_params
     initial_state = Engine::Game.new_game(raw_players)
 
     game = {
@@ -35,6 +38,9 @@ class GameController < ApplicationController
     }
 
     save_game(game)
+    redirect_to root_path
+  rescue ActionController::ParameterMissing
+    flash[:alert] = "Missing players."
     redirect_to root_path
   rescue ArgumentError => e
     flash[:alert] = e.message
@@ -48,6 +54,26 @@ class GameController < ApplicationController
 
     session[:player_count] = count
     redirect_to root_path
+  end
+
+  def choose_top_action
+    game = load_game
+    action_name = params.fetch(:action_name)
+
+    game["actions"] << { "type" => "CHOOSE_TOP_ACTION", "action" => action_name }
+    save_game(game)
+
+    redirect_to root_path
+  rescue KeyError
+    flash[:alert] = "Missing action."
+    redirect_to root_path
+  rescue ArgumentError => e
+    flash[:alert] = e.message
+    redirect_to root_path
+  end
+
+  def players_params
+    params.require(:players).permit!.to_h.values
   end
 
   private

@@ -18,6 +18,13 @@ module Engine
     "Agricultural",
     "Militant",
     "Innovative"
-].freeze
+  ].freeze
+
+  TOP_ACTIONS = [
+    "MOVE",
+    "PRODUCE",
+    "TRADE",
+    "BOLSTER"
+  ].freeze
   end
 end
