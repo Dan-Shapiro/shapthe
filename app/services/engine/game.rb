@@ -17,7 +17,8 @@ module Engine
       {
         "players" => names,
         "turn" => 1,
-        "current_player_index" => 0
+        "current_player_index" => 0,
+        "seed" => Random.new_seed
       }
     end
 
@@ -61,6 +62,13 @@ module Engine
 
     def self.valid_action?(action)
       action.is_a?(Hash) && action["type"].is_a?(String)
+    end
+
+    def self.debug_roll(state)
+      seed = state.fetch("seed") || Random.new_seed
+      rng = Engine::Rng.new(seed)
+      roll, _rng2 = rng.rand(1000)
+      roll
     end
   end
 end
