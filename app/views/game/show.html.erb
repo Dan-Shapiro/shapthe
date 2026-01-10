@@ -3,6 +3,8 @@
 <p><strong>Turn:</strong> <%= @turn %></p>
 <p><strong>Current Player:</strong> <%= @current_player %></p>
 
+<%= button_to "End Turn", "/end_turn", method: :post %>
+
 <h2>Players</h2>
 <ul>
   <% @players.each do |p| %>

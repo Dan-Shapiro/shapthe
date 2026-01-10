@@ -12,6 +12,17 @@ module Engine
       players.fetch(current_player_index)
     end
 
+    def end_turn
+      next_index = (current_player_index + 1) % players.length
+      next_turn = next_index == 0 ? turn + 1 : turn
+
+      self.class.new(
+        players: players,
+        turn: next_turn,
+        current_player_index: next_index
+      )
+    end
+
     # serialize to a plain hash so it can go in rails session
     def to_h
       {
