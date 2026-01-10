@@ -69,6 +69,19 @@ module Engine
       action.is_a?(Hash) && action["type"].is_a?(String)
     end
 
+    def self.legal_actions(state)
+      actions = []
+      actions << { "type" => "END_TURN" }
+
+      if state["turn_top_action"].nil?
+        Engine::Catalog::TOP_ACTIONS.each do |a|
+          actions << { "type" => "CHOOSE_TOP_ACTION", "action" => a }
+        end
+      end
+
+      actions
+    end
+
     def self.debug_roll(state)
       seed = state.fetch("seed") || Random.new_seed
       rng = Engine::Rng.new(seed)

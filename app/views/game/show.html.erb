@@ -55,13 +55,20 @@
   <% end %>
 </ul>
 
-<h2>Top Action</h2>
-<% if @turn_top_action.present? %>
-  <p><strong>Chosen:</strong> <%= @turn_top_action %></p>
-<% else %>
-  <p>Choose a top-row action:</p>
+<h2>Actions</h2>
 
-  <% @top_actions.each do |a| %>
-    <%= button_to a, "/choose_top_action", method: :post, params: { action_name: a } %>
-  <% end %>
+<% if flash[:alert] %>
+  <p style="color: red;"><%= flash[:alert] %></p>
 <% end %>
+
+<ul>
+  <% @legal_actions.each do |a| %>
+    <li style="margin-bottom: 6px;">
+      <% if a["type"] == "END_TURN" %>
+        <%= button_to "End Turn", "/end_turn", method: :post %>
+      <% elsif a["type"] == "CHOOSE_TOP_ACTION" %>
+        <%= button_to "Choose: #{a["action"]}", "/choose_top_action", method: :post, params: { action_name: a["action"] } %>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
