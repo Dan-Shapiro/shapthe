@@ -1,23 +1,32 @@
 class GameController < ApplicationController
   def show
-    state = load_state
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
 
     @turn = state.fetch("turn")
     @current_player = Engine::Game.current_player_name(state)
     @players = state.fetch("players")
+
+    @action_count = game.fetch("actions").length
   end
 
   def end_turn
-    state = load_state
-    state = Engine::Game.apply_action(state, { "type" => "END_TURN" })
-    save_state(state)
+    game = load_game
+    append_action!(game, { "type" => "END_TURN" })
+    save_game(game)
     redirect_to root_path
   end
 
   def new_game
     names = params.fetch(:players, "").split(",")
-    state = Engine::Game.new_game(names)
-    save_state(state)
+    initial_state = Engine::Game.new_game(names)
+
+    game = {
+      "initial_state" => initial_state,
+      "actions" => []
+    }
+
+    save_game(game)
     redirect_to root_path
   rescue ArgumentError => e
     flash[:alert] = e.message
@@ -26,16 +35,26 @@ class GameController < ApplicationController
 
   private
 
-  def load_state
-    state = session[:game]
-    return state if state.present?
+  def load_game
+    game = session[:game]
+    return game if game.present? && game["initial_state"].present? && game["actions"].is_a?(Array)
 
-    state = Engine::Game.new_game([ "Dan", "Kris" ])
-    save_state(state)
-    state
+    # default game
+    initial_state = Engine::Game.new_game([ "Dan", "Kris" ])
+    game = { "initial_state" => initial_state, "actions" => [] }
+    save_game(game)
+    game
   end
 
-  def save_state(state)
-    session[:game] = state
+  def save_game(game)
+    session[:game] = game
+  end
+
+  def append_action!(game, action)
+    unless Engine::Game.valid_action?(action)
+      raise ArgumentError, "Invalid action"
+    end
+
+    game["actions"] << action
   end
 end
