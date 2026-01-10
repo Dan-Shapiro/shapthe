@@ -3,6 +3,9 @@ class GameController < ApplicationController
     game = load_game
     state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
 
+    @seed = state.fetch("seed")
+    @debug_roll = Engine::Game.debug_roll(state)
+
     @turn = state.fetch("turn")
     @current_player = Engine::Game.current_player_name(state)
     @players = state.fetch("players")
@@ -37,7 +40,11 @@ class GameController < ApplicationController
 
   def load_game
     game = session[:game]
-    return game if game.present? && game["initial_state"].present? && game["actions"].is_a?(Array)
+    if game.present? && game["initial_state"].present? && game["actions"].is_a?(Array)
+      game["initial_state"]["seed"] ||= Random.new_seed
+      session[:game] = game
+      return game
+    end
 
     # default game
     initial_state = Engine::Game.new_game([ "Dan", "Kris" ])
