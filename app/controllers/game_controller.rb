@@ -5,6 +5,7 @@ class GameController < ApplicationController
 
     @top_actions = Engine::Catalog::TOP_ACTIONS
     @turn_top_action = state["turn_top_action"]
+    @legal_actions = Engine::Game.legal_actions(state)
 
     @seed = state.fetch("seed")
     @debug_roll = Engine::Game.debug_roll(state)
@@ -23,7 +24,15 @@ class GameController < ApplicationController
 
   def end_turn
     game = load_game
-    append_action!(game, { "type" => "END_TURN" })
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
+    action = { "type" => "END_TURN" }
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
     save_game(game)
     redirect_to root_path
   end
@@ -58,11 +67,18 @@ class GameController < ApplicationController
 
   def choose_top_action
     game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
     action_name = params.fetch(:action_name)
+    action = { "type" => "CHOOSE_TOP_ACTION", "action" => action_name }
 
-    game["actions"] << { "type" => "CHOOSE_TOP_ACTION", "action" => action_name }
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
     save_game(game)
-
     redirect_to root_path
   rescue KeyError
     flash[:alert] = "Missing action."
