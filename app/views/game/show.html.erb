@@ -1,2 +1,11 @@
 <h1>Scythe</h1>
-<p>Sandbox is running.</p>
+
+<p><strong>Turn:</strong> <%= @turn %></p>
+<p><strong>Current Player:</strong> <%= @current_player %></p>
+
+<h2>Players</h2>
+<ul>
+  <% @players.each do |p| %>
+    <li><%= p %> <%= "<<" if p == @current_player %></li>
+  <% end %>
+</ul>
