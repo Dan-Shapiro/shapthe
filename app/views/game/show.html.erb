@@ -54,3 +54,14 @@
       </li>
   <% end %>
 </ul>
+
+<h2>Top Action</h2>
+<% if @turn_top_action.present? %>
+  <p><strong>Chosen:</strong> <%= @turn_top_action %></p>
+<% else %>
+  <p>Choose a top-row action:</p>
+
+  <% @top_actions.each do |a| %>
+    <%= button_to a, "/choose_top_action", method: :post, params: { action_name: a } %>
+  <% end %>
+<% end %>
