@@ -1,5 +1,15 @@
 <h1>Scythe</h1>
 
+<% if flash[:alert] %>
+  <p style="color: red;"><%= flash[:alert] %></p>
+<% end %>
+
+<h2>Start New Game</h2>
+<%= form_with url: "/new_game", method: :post do %>
+  <%= text_field_tag :players, @players&.join(", "), placeholder: "Dan, Kris" %>
+  <%= submit_tag "Start New Game" %>
+<% end %>
+
 <p><strong>Turn:</strong> <%= @turn %></p>
 <p><strong>Current Player:</strong> <%= @current_player %></p>
 
