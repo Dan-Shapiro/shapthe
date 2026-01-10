@@ -12,6 +12,10 @@ class GameController < ApplicationController
     @players = state.fetch("players")
 
     @action_count = game.fetch("actions").length
+
+    @player_count = (session[:player_count] || 2).to_i
+    @player_count = 2 if @player_count < 2
+    @player_count = 7 if @player_count > 7
   end
 
   def end_turn
@@ -34,6 +38,15 @@ class GameController < ApplicationController
     redirect_to root_path
   rescue ArgumentError => e
     flash[:alert] = e.message
+    redirect_to root_path
+  end
+
+  def set_player_count
+    count = params.fetch(:player_count, "2").to_i
+    count = 2 if count < 2
+    count = 7 if count > 7
+
+    session[:player_count] = count
     redirect_to root_path
   end
 

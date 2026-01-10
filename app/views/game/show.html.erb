@@ -1,3 +1,11 @@
+<h2>Setup</h2>
+
+<%= form_with url: "/set_player_count", method: :post do %>
+  <label>Number of players:</label>
+  <%= select_tag :player_count, options_for_select([2,3,4,5,6,7], @player_count) %>
+  <%= submit_tag "Set" %>
+<% end %>
+
 <h2>Start New Game</h2>
 
 <% if flash[:alert] %>
@@ -5,23 +13,24 @@
 <% end %>
 
 <%= form_with url: "/new_game", method: :post do %>
-  <% 2.times do |i| %>
+  <% @player_count.times do |i| %>
+    <% default_names = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7"] %>
     <fieldset style="margin-bottom: 12px; padding: 8px; border: 1px solid $444;">
       <legend>Player <%= i + 1 %></legend>
 
       <div>
         <label>Name</label><br />
-        <%= text_field_tag "players[#{i}][name]", (i == 0 ? "Dan" : "Kris") %>
+        <%= text_field_tag "players[#{i}][name]", default_names[i] %>
       </div>
 
       <div style="margin-top: 6px;">
         <label>Faction</label><br />
-        <%= select_tag "players[#{i}][faction]", options_for_select(Engine::Catalog::FACTIONS) %>
+        <%= select_tag "players[#{i}][faction]", options_for_select(Engine::Catalog::FACTIONS, Engine::Catalog::FACTIONS[i]) %>
       </div>
 
       <div style="margin-top: 6px;">
         <label>Player Mat</label>
-        <%= select_tag "players[#{i}][mat]", options_for_select(Engine::Catalog::PLAYER_MATS) %>
+        <%= select_tag "players[#{i}][mat]", options_for_select(Engine::Catalog::PLAYER_MATS, Engine::Catalog::PLAYER_MATS[i % Engine::Catalog::PLAYER_MATS.length]) %>
       </div>
     </fieldset>
   <% end %>
