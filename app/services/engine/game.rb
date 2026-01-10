@@ -23,6 +23,16 @@ module Engine
       )
     end
 
+    def self.new_game(player_names)
+      names = player_names.map(&:to_s).map(&:strip).reject(&:empty?)
+
+      if names.length < 2 || names.length > 5
+        raise ArgumentError, "Only supports 2-5 players."
+      end
+
+      new(players: names, turn: 1, current_player_index: 0)
+    end
+
     # serialize to a plain hash so it can go in rails session
     def to_h
       {

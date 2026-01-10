@@ -14,6 +14,16 @@ class GameController < ApplicationController
     redirect_to root_path
   end
 
+  def new_game
+    names = params.fetch(:players, "").split(",")
+    game = Engine::Game.new_game(names)
+    save_game(game)
+    redirect_to root_path
+  rescue ArgumentError => e
+    flash[:alert] = e.message
+    redirect_to root_path
+  end
+
   private
 
   def load_game
