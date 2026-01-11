@@ -23,6 +23,9 @@ class GameController < ApplicationController
     @player_count = (session[:player_count] || 2).to_i
     @player_count = 2 if @player_count < 2
     @player_count = 7 if @player_count > 7
+
+    @hexes = state["board"]["hexes"]
+    @pieces = state["pieces"]
   end
 
   def end_turn
