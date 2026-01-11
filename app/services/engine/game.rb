@@ -53,7 +53,8 @@ module Engine
           "hexes" => Engine::Board::HEXES,
           "adjacency" => Engine::Board::ADJACENCY
         },
-        "pieces" => initial_pieces(players)
+        "pieces" => initial_pieces(players),
+        "pending" => nil
       }
     end
 
@@ -71,6 +72,10 @@ module Engine
         skip_bottom(state)
       when "CHOOSE_BOLSTER_REWARD"
         choose_bolster_reward(state, action)
+      when "SELECT_PIECE"
+        select_piece(state, action)
+      when "MOVE_PIECE"
+        move_piece(state, action)
       else
         raise ArgumentError, "Unknown action type: #{type}"
       end
@@ -140,8 +145,28 @@ module Engine
           actions << { "type" => "CHOOSE_COLUMN", "column" => i }
         end
       when "BOTTOM_OPTION"
-        actions << { "type" => "DO_BOTTOM" }
-        actions << { "type" => "SKIP_BOTTOM" }
+        if selected_top_action(state) == "MOVE"
+          pending = state["pending"]
+
+          if pending.nil?
+            idx = state.fetch("current_player_index")
+            state.fetch("pieces").each do |pc|
+              next unless pc["owner"] == idx
+              actions << { "type" => "SELECT_PIECE", "piece_id" => pc["id"] }
+            end
+          else
+            piece_id = pending["piece_id"]
+            piece = state.fetch("pieces").find { |pc| pc["id"] == piece_id }
+            from = piece.fetch("hex")
+            neighbors = state.fetch("board").fetch("adjacency").fetch(from)
+
+            neighbors.each do |hex|
+              actions << { "type" => "MOVE_PIECE", "to_hex" => hex }
+            end
+          end
+        else
+          actions << { "type" => "SKIP_BOTTOM" }
+        end
       when "READY_TO_END"
         actions << { "type" => "END_TURN" }
       when "CHOOSE_BOLSTER"
@@ -169,7 +194,7 @@ module Engine
         pieces << { "id" => "char_#{i}", "owner" => i, "type" => "CHARACTER", "hex" => home }
 
         2.times do |w|
-          pieces << { "id" => "worker_#{w}", "owner" => i,  "type" => "WORKER", "hex" => home }
+          pieces << { "id" => "worker_#{i}_#{w}", "owner" => i,  "type" => "WORKER", "hex" => home }
         end
       end
       pieces
@@ -188,7 +213,8 @@ module Engine
         "current_player_index" => next_index,
         "turn" => next_turn,
         "turn_step" => "CHOOSE_COLUMN",
-        "turn_column" => nil
+        "turn_column" => nil,
+        "pending" => nil
       )
     end
 
@@ -243,6 +269,48 @@ module Engine
       state.merge(
         "players" => players,
         "turn_step" => "BOTTOM_OPTION"
+      )
+    end
+
+    def self.select_piece(state, action)
+      raise ArgumentError, "Not choosing move targets right now." unless state["turn_step"] == "BOTTOM_OPTION"
+
+      raise ArgumentError, "Top action is not MOVE." unless selected_top_action(state) == "MOVE"
+
+      piece_id = action.fetch("piece_id")
+      idx = state.fetch("current_player_index")
+
+      piece = state.fetch("pieces").find { |pc| pc["id"] == piece_id }
+      raise ArgumentError, "Piece not found." if piece.nil?
+      raise ArgumentError, "Not your piece." unless piece["owner"] == idx
+
+      state.merge("pending" => { "type" => "MOVE", "piece_id" => piece_id })
+    end
+
+    def self.move_piece(state, action)
+      raise ArgumentError, "No move pending." unless state["pending"].is_a?(Hash) && state["pending"]["type"] == "MOVE"
+
+      piece_id = state["pending"]["piece_id"]
+      dest = action.fetch("to_hex")
+
+      adjacency = state.fetch("board").fetch("adjacency")
+      pieces = state.fetch("pieces")
+
+      piece = pieces.find { |pc| pc["id"] == piece_id }
+      raise ArgumentError, "Piece not found." if piece.nil?
+
+      from = piece.fetch("hex")
+      neighbors = adjacency.fetch(from)
+      raise ArgumentError, "Destination not adjacent." unless neighbors.include?(dest)
+
+      new_pieces = pieces.map do |pc|
+        pc["id"] == piece_id ? pc.merge("hex" => dest) : pc
+      end
+
+      state.merge(
+        "pieces" => new_pieces,
+        "pending" => nil,
+        "turn_step" => "READY_TO_END"
       )
     end
   end

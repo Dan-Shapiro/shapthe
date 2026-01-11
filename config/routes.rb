@@ -9,4 +9,6 @@ Rails.application.routes.draw do
   post "/reset_session", to: "game#reset_session"
   get "/dev/reset", to: "game#dev_reset"
   post "/choose_bolster_reward", to: "game#choose_bolster_reward"
+  post "/select_piece", to: "game#select_piece"
+  post "/move_piece", to: "game#move_piece"
 end

@@ -129,6 +129,46 @@ class GameController < ApplicationController
     redirect_to root_path
   end
 
+  def select_piece
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
+    piece_id = params.fetch(:piece_id)
+    action = { "type" => "SELECT_PIECE", "piece_id" => piece_id }
+
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
+    save_game(game)
+    redirect_to root_path
+  rescue KeyError
+    flash[:alert] = "Missing piece."
+    redirect_to root_path
+  end
+
+  def move_piece
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
+    to_hex = params.fetch(:to_hex)
+    action = { "type" => "MOVE_PIECE", "to_hex" => to_hex }
+
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
+    save_game(game)
+    redirect_to root_path
+  rescue KeyError
+    flash[:alert] = "Missing destination."
+    redirect_to root_path
+  end
+
   private
 
   def load_game

@@ -86,6 +86,9 @@
 <% end %>
 
 <h2>Actions</h2>
+<% if @pending.present? %>
+  <p><strong>Pending:</strong> <%= @pending.inspect %></p>
+<% end %>
 <ul>
   <% @legal_actions.each do |a| %>
     <li style="margin-bottom: 6px;">
@@ -96,6 +99,12 @@
               "/choose_column", method: :post, params: { column: a["column"] } %>
       <% when "CHOOSE_BOLSTER_REWARD" %>
         <%= button_to "Bolster: #{a["reward"]}", "/choose_bolster_reward", method: :post, params: { reward: a["reward"] } %>
+      <% when "SELECT_PIECE" %>
+        <%= button_to "Select piece: #{a["piece_id"]}",
+              "/select_piece", method: :post, params: { piece_id: a["piece_id"] } %>
+      <% when "MOVE_PIECE" %>
+        <%= button_to "Move to #{a["to_hex"]}",
+              "/move_piece", method: :post, params: { to_hex: a["to_hex"] } %>
       <% when "DO_BOTTOM" %>
         <%= button_to "Do Bottom Action", "/do_bottom", method: :post %>
       <% when "SKIP_BOTTOM" %>
