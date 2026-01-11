@@ -54,7 +54,8 @@ module Engine
           "adjacency" => Engine::Board::ADJACENCY
         },
         "pieces" => initial_pieces(players),
-        "pending" => nil
+        "pending" => nil,
+        "resources_by_hex" => {}
       }
     end
 
@@ -76,6 +77,8 @@ module Engine
         select_piece(state, action)
       when "MOVE_PIECE"
         move_piece(state, action)
+      when "PRODUCE_AT"
+        produce_at(state, action)
       else
         raise ArgumentError, "Unknown action type: #{type}"
       end
@@ -145,7 +148,9 @@ module Engine
           actions << { "type" => "CHOOSE_COLUMN", "column" => i }
         end
       when "BOTTOM_OPTION"
-        if selected_top_action(state) == "MOVE"
+        top = selected_top_action(state)
+
+        if top == "MOVE"
           pending = state["pending"]
 
           if pending.nil?
@@ -163,6 +168,18 @@ module Engine
             neighbors.each do |hex|
               actions << { "type" => "MOVE_PIECE", "to_hex" => hex }
             end
+          end
+        elsif top == "PRODUCE"
+          idx = state.fetch("current_player_index")
+
+          worker_hexes =
+            state.fetch("pieces")
+              .select { |pc| pc["owner"] == idx && pc["type"] == "WORKER" }
+              .map { |pc| pc["hex"] }
+              .uniq
+
+          worker_hexes.each do |hex|
+            actions << { "type" => "PRODUCE_AT", "hex" => hex }
           end
         else
           actions << { "type" => "SKIP_BOTTOM" }
@@ -310,6 +327,29 @@ module Engine
       state.merge(
         "pieces" => new_pieces,
         "pending" => nil,
+        "turn_step" => "READY_TO_END"
+      )
+    end
+
+    def self.produce_at(state, action)
+      raise ArgumentError, "Not producing right now." unless state["turn_step"] == "BOTTOM_OPTION"
+      raise ArgumentError, "Top action is not PRODUCE." unless selected_top_action(state) == "PRODUCE"
+
+      hex = action.fetch("hex")
+      pieces = state.fetch("pieces")
+      idx = state.fetch("current_player_index")
+
+      workers_here = pieces.count do |pc|
+        pc["owner"] == idx && pc["type"] == "WORKER" && pc["hex"] == hex
+      end
+
+      raise ArgumentError, "No workers on that hex." if workers_here == 0
+
+      resources = state.fetch("resources_by_hex").dup
+      resources[hex] = (resources[hex] || 0) + workers_here
+
+      state.merge(
+        "resources_by_hex" => resources,
         "turn_step" => "READY_TO_END"
       )
     end

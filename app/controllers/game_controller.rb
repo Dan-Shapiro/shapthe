@@ -26,6 +26,8 @@ class GameController < ApplicationController
 
     @hexes = state["board"]["hexes"]
     @pieces = state["pieces"]
+
+    @resources_by_hex = state["resources_by_hex"] || {}
   end
 
   def end_turn
@@ -166,6 +168,26 @@ class GameController < ApplicationController
     redirect_to root_path
   rescue KeyError
     flash[:alert] = "Missing destination."
+    redirect_to root_path
+  end
+
+  def produce_at
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
+    hex = params.fetch(:hex)
+    action = { "type" => "PRODUCE_AT", "hex" => hex }
+
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
+    save_game(game)
+    redirect_to root_path
+  rescue KeyError
+    flash[:alert] = "Missing hex."
     redirect_to root_path
   end
 
