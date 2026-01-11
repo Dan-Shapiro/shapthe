@@ -8,4 +8,5 @@ Rails.application.routes.draw do
   post "/skip_bottom", to: "game#skip_bottom"
   post "/reset_session", to: "game#reset_session"
   get "/dev/reset", to: "game#dev_reset"
+  post "/choose_bolster_reward", to: "game#choose_bolster_reward"
 end

@@ -6,13 +6,19 @@ module Engine
           {
             "name" => p["name"].to_s.strip,
             "faction" => p["faction"].to_s.strip,
-            "mat" => p["mat"].to_s.strip
+            "mat" => p["mat"].to_s.strip,
+            "power" => 1,
+            "popularity" => 1,
+            "coins" => 0
           }
         else
           {
             "name" => p.to_s.strip,
             "faction" => Engine::Catalog::FACTIONS[i % Engine::Catalog::FACTIONS.length],
-            "mat" => Engine::Catalog::PLAYER_MATS[i % Engine::Catalog::PLAYER_MATS.length]
+            "mat" => Engine::Catalog::PLAYER_MATS[i % Engine::Catalog::PLAYER_MATS.length],
+            "power" => 1,
+            "popularity" => 1,
+            "coins" => 0
           }
         end
       end
@@ -58,6 +64,8 @@ module Engine
         do_bottom(state)
       when "SKIP_BOTTOM"
         skip_bottom(state)
+      when "CHOOSE_BOLSTER_REWARD"
+        choose_bolster_reward(state, action)
       else
         raise ArgumentError, "Unknown action type: #{type}"
       end
@@ -104,6 +112,15 @@ module Engine
       action
     end
 
+    def self.selected_top_action(state)
+      pair = selected_column_pair(state)
+      pair ? pair["top"] : nil
+    end
+
+    def self.selected_bottom_action(state)
+      pair = selected_column_pair(state)
+      pair ? pair["bottom"] : nil
+    end
 
     def self.valid_action?(action)
       action.is_a?(Hash) && action["type"].is_a?(String)
@@ -122,6 +139,9 @@ module Engine
         actions << { "type" => "SKIP_BOTTOM" }
       when "READY_TO_END"
         actions << { "type" => "END_TURN" }
+      when "CHOOSE_BOLSTER"
+        actions << { "type" => "CHOOSE_BOLSTER_REWARD", "reward" => "POWER" }
+        actions << { "type" => "CHOOSE_BOLSTER_REWARD", "reward" => "POPULARITY" }
       else
         raise "Unknown turn step: #{state["turn_step"]}"
       end
@@ -159,9 +179,16 @@ module Engine
       col = Integer(action.fetch("column"))
       raise ArgumentError, "Column must be 0-3" unless (0..3).include?(col)
 
+      next_step =
+        if current_mat_layout(state).fetch(col).fetch("top") == "BOLSTER"
+          "CHOOSE_BOLSTER"
+        else
+          "BOTTOM_OPTION"
+        end
+
       state.merge(
         "turn_column" => col,
-        "turn_step" => "BOTTOM_OPTION"
+        "turn_step" => next_step
       )
     end
 
@@ -174,6 +201,30 @@ module Engine
     def self.skip_bottom(state)
       raise ArgumentError, "Bottom action not available right now." unless state["turn_step"] == "BOTTOM_OPTION"
       state.merge("turn_step" => "READY_TO_END")
+    end
+
+    def self.choose_bolster_reward(state, action)
+      raise ArgumentError, "Not choosing bolster reward right now." unless state["turn_step"] == "CHOOSE_BOLSTER"
+
+      reward = action.fetch("reward")
+      raise ArgumentError, "Invalid reward" unless [ "POWER", "POPULARITY" ].include?(reward)
+
+      idx = state.fetch("current_player_index")
+      players = state.fetch("players").map.with_index do |p, i|
+        next p unless i == idx
+
+        case reward
+        when "POWER"
+          p.merge("power" => p.fetch("power") + 2)
+        when "POPULARITY"
+          p.merge("popularity" => p.fetch("popularity") + 1)
+        end
+      end
+
+      state.merge(
+        "players" => players,
+        "turn_step" => "BOTTOM_OPTION"
+      )
     end
   end
 end
