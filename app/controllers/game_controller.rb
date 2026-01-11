@@ -3,8 +3,11 @@ class GameController < ApplicationController
     game = load_game
     state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
 
-    @top_actions = Engine::Catalog::TOP_ACTIONS
-    @turn_top_action = state["turn_top_action"]
+    @turn_step = state["turn_step"]
+    @turn_column = state["turn_column"]
+    @selected_pair = Engine::Game.selected_column_pair(state)
+    @mat_layout = Engine::Game.current_mat_layout(state)
+
     @legal_actions = Engine::Game.legal_actions(state)
 
     @seed = state.fetch("seed")
@@ -65,12 +68,12 @@ class GameController < ApplicationController
     redirect_to root_path
   end
 
-  def choose_top_action
+  def choose_column
     game = load_game
     state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
 
-    action_name = params.fetch(:action_name)
-    action = { "type" => "CHOOSE_TOP_ACTION", "action" => action_name }
+    col = params.fetch(:column).to_i
+    action = { "type" => "CHOOSE_COLUMN", "column" => col }
 
     unless Engine::Game.legal_actions(state).include?(action)
       flash[:alert] = "That action is not legal right now."
@@ -80,16 +83,27 @@ class GameController < ApplicationController
     game["actions"] << action
     save_game(game)
     redirect_to root_path
-  rescue KeyError
-    flash[:alert] = "Missing action."
-    redirect_to root_path
-  rescue ArgumentError => e
-    flash[:alert] = e.message
-    redirect_to root_path
+  end
+
+  def do_bottom
+    append_simple_action!("DO_BOTTOM")
+  end
+
+  def skip_bottom
+    append_simple_action!("SKIP_BOTTOM")
   end
 
   def players_params
     params.require(:players).permit!.to_h.values
+  end
+
+  def reset_session
+    session.delete(:game)
+    redirect_to root_path
+  end
+
+  def dev_reset
+    reset_session
   end
 
   private
@@ -120,6 +134,21 @@ class GameController < ApplicationController
     end
 
     game["actions"] << action
+  end
+
+  def append_simple_action!(type)
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+    action = { "type" => type }
+
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      return redirect_to root_path
+    end
+
+    game["actions"] << action
+    save_game(game)
+    redirect_to root_path
   end
 
   def normalize_state!(state)

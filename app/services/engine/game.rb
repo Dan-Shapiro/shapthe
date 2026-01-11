@@ -1,7 +1,7 @@
 module Engine
   class Game
     def self.new_game(raw_players)
-      players = Array(raw_players).map do |p|
+      players = Array(raw_players).each_with_index.map do |p, i|
         if p.is_a?(Hash)
           {
             "name" => p["name"].to_s.strip,
@@ -9,7 +9,11 @@ module Engine
             "mat" => p["mat"].to_s.strip
           }
         else
-          { "name" => p.to_s.strip, "faction" => "", "mat" => "" }
+          {
+            "name" => p.to_s.strip,
+            "faction" => Engine::Catalog::FACTIONS[i % Engine::Catalog::FACTIONS.length],
+            "mat" => Engine::Catalog::PLAYER_MATS[i % Engine::Catalog::PLAYER_MATS.length]
+          }
         end
       end
 
@@ -37,7 +41,8 @@ module Engine
         "turn" => 1,
         "current_player_index" => 0,
         "seed" => Random.new_seed,
-        "turn_top_action" => nil
+        "turn_step" => "CHOOSE_COLUMN",
+        "turn_column" => nil
       }
     end
 
@@ -47,11 +52,19 @@ module Engine
       case type
       when "END_TURN"
         end_turn(state)
-      when "CHOOSE_TOP_ACTION"
-        choose_top_action(state, action)
+      when "CHOOSE_COLUMN"
+        choose_column(state, action)
+      when "DO_BOTTOM"
+        do_bottom(state)
+      when "SKIP_BOTTOM"
+        skip_bottom(state)
       else
         raise ArgumentError, "Unknown action type: #{type}"
       end
+    end
+
+    def self.current_player(state)
+      state.fetch("players").fetch(state.fetch("current_player_index"))
     end
 
     def self.current_player_name(state)
@@ -59,11 +72,38 @@ module Engine
       player.is_a?(Hash) ? player.fetch("name") : player
     end
 
+    def self.current_mat_layout(state)
+      mat = current_player(state).fetch("mat")
+      Engine::Catalog::MAT_LAYOUTS.fetch(mat)
+    end
+
+    def self.selected_column_pair(state)
+      col = state.fetch("turn_column")
+      return nil if col.nil?
+      current_mat_layout(state).fetch(col)
+    end
+
     def self.replay(initial_state, actions)
       actions.reduce(initial_state) do |state, action|
-        apply_action(state, action)
+        apply_action(state, migrate_action(state, action))
       end
     end
+
+    def self.migrate_action(state, action)
+      if action["type"] == "CHOOSE_TOP_ACTION"
+        top = action["action"]
+
+        layout = current_mat_layout(state)
+        col = layout.index { |pair| pair["top"] == top }
+
+        return { "type" => "CHOOSE_COLUMN", "column" => col } if col
+
+        return { "type" => "CHOOSE_COLUMN", "column" => 0 }
+      end
+
+      action
+    end
+
 
     def self.valid_action?(action)
       action.is_a?(Hash) && action["type"].is_a?(String)
@@ -71,12 +111,19 @@ module Engine
 
     def self.legal_actions(state)
       actions = []
-      actions << { "type" => "END_TURN" }
 
-      if state["turn_top_action"].nil?
-        Engine::Catalog::TOP_ACTIONS.each do |a|
-          actions << { "type" => "CHOOSE_TOP_ACTION", "action" => a }
+      case state["turn_step"]
+      when "CHOOSE_COLUMN"
+        4.times do |i|
+          actions << { "type" => "CHOOSE_COLUMN", "column" => i }
         end
+      when "BOTTOM_OPTION"
+        actions << { "type" => "DO_BOTTOM" }
+        actions << { "type" => "SKIP_BOTTOM" }
+      when "READY_TO_END"
+        actions << { "type" => "END_TURN" }
+      else
+        raise "Unknown turn step: #{state["turn_step"]}"
       end
 
       actions
@@ -101,22 +148,32 @@ module Engine
       state.merge(
         "current_player_index" => next_index,
         "turn" => next_turn,
-        "turn_top_action" => nil
+        "turn_step" => "CHOOSE_COLUMN",
+        "turn_column" => nil
       )
     end
 
-    def self.choose_top_action(state, action)
-      chosen = action.fetch("action")
+    def self.choose_column(state, action)
+      raise ArgumentError, "Not choosing a column right now." unless state["turn_step"] == "CHOOSE_COLUMN"
 
-      unless Engine::Catalog::TOP_ACTIONS.include?(chosen)
-        raise ArgumentError, "Invalid top action: #{chosen}"
-      end
+      col = Integer(action.fetch("column"))
+      raise ArgumentError, "Column must be 0-3" unless (0..3).include?(col)
 
-      if state["turn_top_action"]
-        raise ArgumentError, "Top action already chosen."
-      end
+      state.merge(
+        "turn_column" => col,
+        "turn_step" => "BOTTOM_OPTION"
+      )
+    end
 
-      state.merge("turn_top_action" => chosen)
+    def self.do_bottom(state)
+      raise ArgumentError, "Bottom action not available right now." unless state["turn_step"] == "BOTTOM_OPTION"
+
+      state.merge("turn_step" => "READY_TO_END")
+    end
+
+    def self.skip_bottom(state)
+      raise ArgumentError, "Bottom action not available right now." unless state["turn_step"] == "BOTTOM_OPTION"
+      state.merge("turn_step" => "READY_TO_END")
     end
   end
 end
