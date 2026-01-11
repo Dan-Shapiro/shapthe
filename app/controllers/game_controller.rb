@@ -106,6 +106,26 @@ class GameController < ApplicationController
     reset_session
   end
 
+  def choose_bolster_reward
+    game = load_game
+    state = Engine::Game.replay(game.fetch("initial_state"), game.fetch("actions"))
+
+    reward = params.fetch(:reward)
+    action = { "type" => "CHOOSE_BOLSTER_REWARD", "reward" => reward }
+
+    unless Engine::Game.legal_actions(state).include?(action)
+      flash[:alert] = "That action is not legal right now."
+      redirect_to root_path
+    end
+
+    game["actions"] << action
+    save_game(game)
+    redirect_to root_path
+  rescue KeyError
+    flash[:alert] = "Missing reward."
+    redirect_to root_path
+  end
+
   private
 
   def load_game

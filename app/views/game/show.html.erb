@@ -45,9 +45,12 @@
   <% @players.each_with_index do |p, idx| %>
     <li>
       <strong><%= p["name"] %></strong>
-      - <%= p["faction"] %> / <%= p["mat"] %>
-      <%= "<<" if idx == @current_player_index %>
-      </li>
+      — <%= p["faction"] %> / <%= p["mat"] %>
+      | Power: <%= p["power"] %>
+      | Popularity: <%= p["popularity"] %>
+      | Coins: <%= p["coins"] %>
+      <%= "←" if idx == @current_player_index %>
+    </li>
   <% end %>
 </ul>
 
@@ -71,6 +74,8 @@
         <% pair = @mat_layout[a["column"]] %>
         <%= button_to "Choose Column #{a["column"]}: #{pair["top"]} / #{pair["bottom"]}",
               "/choose_column", method: :post, params: { column: a["column"] } %>
+      <% when "CHOOSE_BOLSTER_REWARD" %>
+        <%= button_to "Bolster: #{a["reward"]}", "/choose_bolster_reward", method: :post, params: { reward: a["reward"] } %>
       <% when "DO_BOTTOM" %>
         <%= button_to "Do Bottom Action", "/do_bottom", method: :post %>
       <% when "SKIP_BOTTOM" %>
