@@ -11,4 +11,5 @@ Rails.application.routes.draw do
   post "/choose_bolster_reward", to: "game#choose_bolster_reward"
   post "/select_piece", to: "game#select_piece"
   post "/move_piece", to: "game#move_piece"
+  post "/produce_at", to: "game#produce_at"
 end

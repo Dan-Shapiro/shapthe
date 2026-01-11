@@ -70,6 +70,8 @@
           </span>
         <% end %>
       <% end %>
+      <% res = @resources_by_hex[hex] || 0 %>
+      <span> | Resources: <%= res %></span>
     </li>
   <% end %>
 </ul>
@@ -105,6 +107,9 @@
       <% when "MOVE_PIECE" %>
         <%= button_to "Move to #{a["to_hex"]}",
               "/move_piece", method: :post, params: { to_hex: a["to_hex"] } %>
+      <% when "PRODUCE_AT" %>
+        <%= button_to "Produce at #{a["hex"]}",
+              "/produce_at", method: :post, params: { hex: a["hex"] } %>
       <% when "DO_BOTTOM" %>
         <%= button_to "Do Bottom Action", "/do_bottom", method: :post %>
       <% when "SKIP_BOTTOM" %>
