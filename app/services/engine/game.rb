@@ -48,7 +48,12 @@ module Engine
         "current_player_index" => 0,
         "seed" => Random.new_seed,
         "turn_step" => "CHOOSE_COLUMN",
-        "turn_column" => nil
+        "turn_column" => nil,
+        "board" => {
+          "hexes" => Engine::Board::HEXES,
+          "adjacency" => Engine::Board::ADJACENCY
+        },
+        "pieces" => initial_pieces(players)
       }
     end
 
@@ -154,6 +159,20 @@ module Engine
       rng = Engine::Rng.new(seed)
       roll, _rng2 = rng.rand(1000)
       roll
+    end
+
+    def self.initial_pieces(players)
+      pieces = []
+      players.each_with_index do |p, i|
+        home = Engine::Board::HOME_BY_FACTION.fetch(p.fetch("faction"))
+
+        pieces << { "id" => "char_#{i}", "owner" => i, "type" => "CHARACTER", "hex" => home }
+
+        2.times do |w|
+          pieces << { "id" => "worker_#{w}", "owner" => i,  "type" => "WORKER", "hex" => home }
+        end
+      end
+      pieces
     end
 
     # --- reducers ---

@@ -54,6 +54,26 @@
   <% end %>
 </ul>
 
+<h2>Board</h2>
+<ul>
+  <% @hexes.each do |hex| %>
+    <li>
+      <strong><%= hex %></strong>
+      —
+      <% here = @pieces.select { |pc| pc["hex"] == hex } %>
+      <% if here.empty? %>
+        (empty)
+      <% else %>
+        <% here.each do |pc| %>
+          <span>
+            <%= pc["type"] %> (P<%= pc["owner"] %>)
+          </span>
+        <% end %>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
+
 <h2>Turn Flow</h2>
 <p><strong>Step:</strong> <%= @turn_step %></p>
 
