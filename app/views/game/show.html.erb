@@ -1,5 +1,4 @@
 <h2>Setup</h2>
-
 <%= form_with url: "/set_player_count", method: :post do %>
   <label>Number of players:</label>
   <%= select_tag :player_count, options_for_select([2,3,4,5,6,7], @player_count) %>
@@ -40,9 +39,6 @@
 
 <p><strong>Turn:</strong> <%= @turn %></p>
 <p><strong>Current Player:</strong> <%= @current_player %></p>
-<p><strong>Actions logged:</strong> <%= @action_count %></p>
-
-<%= button_to "End Turn", "/end_turn", method: :post %>
 
 <h2>Players</h2>
 <ul>
@@ -55,20 +51,37 @@
   <% end %>
 </ul>
 
-<h2>Actions</h2>
+<h2>Turn Flow</h2>
+<p><strong>Step:</strong> <%= @turn_step %></p>
 
-<% if flash[:alert] %>
-  <p style="color: red;"><%= flash[:alert] %></p>
+<% if @selected_pair %>
+  <p>
+    <strong>Selected Column:</strong> <%= @turn_column %> —
+    Top: <%= @selected_pair["top"] %>,
+    Bottom: <%= @selected_pair["bottom"] %>
+  </p>
 <% end %>
 
+<h2>Actions</h2>
 <ul>
   <% @legal_actions.each do |a| %>
     <li style="margin-bottom: 6px;">
-      <% if a["type"] == "END_TURN" %>
+      <% case a["type"] %>
+      <% when "CHOOSE_COLUMN" %>
+        <% pair = @mat_layout[a["column"]] %>
+        <%= button_to "Choose Column #{a["column"]}: #{pair["top"]} / #{pair["bottom"]}",
+              "/choose_column", method: :post, params: { column: a["column"] } %>
+      <% when "DO_BOTTOM" %>
+        <%= button_to "Do Bottom Action", "/do_bottom", method: :post %>
+      <% when "SKIP_BOTTOM" %>
+        <%= button_to "Skip Bottom Action", "/skip_bottom", method: :post %>
+      <% when "END_TURN" %>
         <%= button_to "End Turn", "/end_turn", method: :post %>
-      <% elsif a["type"] == "CHOOSE_TOP_ACTION" %>
-        <%= button_to "Choose: #{a["action"]}", "/choose_top_action", method: :post, params: { action_name: a["action"] } %>
       <% end %>
     </li>
   <% end %>
 </ul>
+
+<%= button_to "Reset Session", "/reset_session", method: :post %>
+
+
